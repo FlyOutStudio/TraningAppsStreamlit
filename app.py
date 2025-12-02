@@ -182,7 +182,7 @@ if not df.empty:
     with tab2:
         st.subheader("記録データ一覧")
         
-        # データテーブル表示
+        # データテーブル表示（編集可能）
         display_df = df.copy()
         display_df['date'] = display_df['date'].astype(str)
         display_df = display_df.rename(columns={
@@ -192,7 +192,69 @@ if not df.empty:
             'evening': '晩',
             'total': '合計'
         })
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
+        
+        # 編集可能なデータエディタ
+        edited_df = st.data_editor(
+            display_df,
+            use_container_width=True,
+            hide_index=True,
+            num_rows="dynamic",  # 行の追加・削除を可能にする
+            column_config={
+                "日付": st.column_config.DateColumn(
+                    "日付",
+                    format="YYYY-MM-DD",
+                    required=True,
+                ),
+                "朝": st.column_config.NumberColumn(
+                    "朝",
+                    min_value=0,
+                    required=True,
+                ),
+                "昼": st.column_config.NumberColumn(
+                    "昼",
+                    min_value=0,
+                    required=True,
+                ),
+                "晩": st.column_config.NumberColumn(
+                    "晩",
+                    min_value=0,
+                    required=True,
+                ),
+                "合計": st.column_config.NumberColumn(
+                    "合計",
+                    disabled=True,  # 合計は自動計算されるため編集不可
+                ),
+            }
+        )
+        
+        # 変更を保存ボタン
+        col1, col2 = st.columns([1, 4])
+        with col1:
+            if st.button("💾 変更を保存", type="primary"):
+                # カラム名を元に戻す
+                edited_df = edited_df.rename(columns={
+                    '日付': 'date',
+                    '朝': 'morning',
+                    '昼': 'afternoon',
+                    '晩': 'evening',
+                    '合計': 'total'
+                })
+                
+                # 日付をdate型に変換
+                edited_df['date'] = pd.to_datetime(edited_df['date']).dt.date
+                
+                # 合計を再計算
+                edited_df['total'] = edited_df['morning'] + edited_df['afternoon'] + edited_df['evening']
+                
+                # データを保存
+                if save_data(edited_df):
+                    st.success("✅ データを保存しました！")
+                    st.rerun()
+        
+        with col2:
+            st.caption("💡 テーブル内のセルをクリックして直接編集できます。編集後は「変更を保存」ボタンをクリックしてください。")
+        
+        st.markdown("---")
         
         # CSVダウンロードボタン
         csv = df.to_csv(index=False).encode('utf-8-sig')
