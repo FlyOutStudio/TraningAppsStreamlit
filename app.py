@@ -209,7 +209,7 @@ if not df.empty:
         
         # レイアウト設定
         fig.update_layout(
-            barmode='group',  # グループ化
+            barmode='stack',  # 積み上げ
             xaxis_title='日付',
             yaxis_title='回数',
             legend=dict(
