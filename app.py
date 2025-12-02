@@ -55,11 +55,13 @@ with st.sidebar:
     st.header("📝 記録を入力")
     
     # 日付選択（12月1日〜31日に制限）
-    min_date = date(2024, 12, 1)
-    max_date = date(2024, 12, 31)
+    today = date.today()
+    current_year = today.year
+    min_date = date(current_year, 12, 1)
+    max_date = date(current_year, 12, 31)
     selected_date = st.date_input(
         "日付を選択",
-        value=date.today() if min_date <= date.today() <= max_date else min_date,
+        value=today,
         min_value=min_date,
         max_value=max_date
     )
@@ -69,8 +71,23 @@ with st.sidebar:
         st.error("12月1日〜31日の範囲で選択してください")
         st.stop()
     
-    # 回数入力
+    # 既存データの確認
+    existing_data = None
+    existing_index = None
+    if not df.empty:
+        existing_rows = df[df['date'] == selected_date]
+        if len(existing_rows) > 0:
+            existing_index = existing_rows.index[0]
+            existing_data = existing_rows.iloc[0]
+    
+    # 既存データがある場合は表示
+    if existing_data is not None:
+        st.info(f"📋 {selected_date}の既存記録: 朝{int(existing_data['morning'])}回 / 昼{int(existing_data['afternoon'])}回 / 晩{int(existing_data['evening'])}回 (合計{int(existing_data['total'])}回)")
+        st.caption("⬇️ 追加する回数を入力してください（既存の値に加算されます）")
+    
+    # 回数入力（常に0からスタート）
     st.subheader("回数を入力")
+    
     morning_count = st.number_input("朝", min_value=0, value=0, step=1)
     afternoon_count = st.number_input("昼", min_value=0, value=0, step=1)
     evening_count = st.number_input("晩", min_value=0, value=0, step=1)
@@ -84,28 +101,30 @@ with st.sidebar:
         if daily_total == 0:
             st.warning("合計が0回です。記録を保存しますか？")
         
-        # 既存データの確認
-        existing_index = None
-        if not df.empty:
-            existing_index = df[df['date'] == selected_date].index
-        
-        # 新しいデータ行を作成
-        new_row = pd.DataFrame({
-            'date': [selected_date],
-            'morning': [morning_count],
-            'afternoon': [afternoon_count],
-            'evening': [evening_count],
-            'total': [daily_total]
-        })
-        
-        if existing_index is not None and len(existing_index) > 0:
-            # 既存データを更新
-            df.loc[existing_index[0]] = new_row.iloc[0]
-            st.success(f"{selected_date}の記録を更新しました！")
+        if existing_index is not None:
+            # 既存データに加算
+            new_morning = int(existing_data['morning']) + morning_count
+            new_afternoon = int(existing_data['afternoon']) + afternoon_count
+            new_evening = int(existing_data['evening']) + evening_count
+            new_total = new_morning + new_afternoon + new_evening
+            
+            df.loc[existing_index, 'morning'] = new_morning
+            df.loc[existing_index, 'afternoon'] = new_afternoon
+            df.loc[existing_index, 'evening'] = new_evening
+            df.loc[existing_index, 'total'] = new_total
+            
+            st.success(f"✅ {selected_date}の記録に追加しました！（朝+{morning_count}回 / 昼+{afternoon_count}回 / 晩+{evening_count}回）")
         else:
             # 新しいデータを追加
+            new_row = pd.DataFrame({
+                'date': [selected_date],
+                'morning': [morning_count],
+                'afternoon': [afternoon_count],
+                'evening': [evening_count],
+                'total': [daily_total]
+            })
             df = pd.concat([df, new_row], ignore_index=True)
-            st.success(f"{selected_date}の記録を保存しました！")
+            st.success(f"✅ {selected_date}の記録を保存しました！")
         
         # 日付でソート
         df = df.sort_values('date').reset_index(drop=True)
