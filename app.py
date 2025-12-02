@@ -184,7 +184,6 @@ if not df.empty:
         
         # データテーブル表示（編集可能）
         display_df = df.copy()
-        display_df['date'] = display_df['date'].astype(str)
         display_df = display_df.rename(columns={
             'date': '日付',
             'morning': '朝',
