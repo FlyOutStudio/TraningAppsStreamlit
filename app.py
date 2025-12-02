@@ -176,8 +176,54 @@ if not df.empty:
         
         # 棒グラフ（朝・昼・晩の内訳）
         st.subheader("朝・昼・晩の内訳")
-        chart_data = chart_df.set_index('date')[['morning', 'afternoon', 'evening']]
-        st.bar_chart(chart_data, use_container_width=True)
+        
+        # Plotlyを使用してグループ化された棒グラフを作成
+        import plotly.graph_objects as go
+        
+        fig = go.Figure()
+        
+        # 日付を文字列形式に変換（X軸用）
+        dates_str = chart_df['date'].dt.strftime('%m/%d').tolist()
+        
+        # 朝・昼・晩のデータを追加
+        fig.add_trace(go.Bar(
+            name='朝',
+            x=dates_str,
+            y=chart_df['morning'].tolist(),
+            marker_color='#FFB6C1'  # ライトピンク
+        ))
+        
+        fig.add_trace(go.Bar(
+            name='昼',
+            x=dates_str,
+            y=chart_df['afternoon'].tolist(),
+            marker_color='#87CEEB'  # スカイブルー
+        ))
+        
+        fig.add_trace(go.Bar(
+            name='晩',
+            x=dates_str,
+            y=chart_df['evening'].tolist(),
+            marker_color='#DDA0DD'  # プラム
+        ))
+        
+        # レイアウト設定
+        fig.update_layout(
+            barmode='group',  # グループ化
+            xaxis_title='日付',
+            yaxis_title='回数',
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            ),
+            height=400,
+            hovermode='x unified'
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
     
     with tab2:
         st.subheader("記録データ一覧")
